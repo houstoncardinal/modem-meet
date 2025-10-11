@@ -2,85 +2,208 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { ArrowLeft, Send, Users, Hash, Circle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
-  user: string;
-  text: string;
-  timestamp: Date;
-  type: "message" | "system";
+  user_id: string;
+  content: string;
+  type: string;
+  created_at: string;
+  profiles: {
+    username: string;
+  };
 }
 
-interface User {
-  username: string;
-  status: "online" | "away" | "busy";
+interface RoomMember {
+  profiles: {
+    username: string;
+    status: string;
+  };
 }
 
-const mockUsers: User[] = [
-  { username: "cyber_punk_77", status: "online" },
-  { username: "retro_gamer", status: "online" },
-  { username: "neon_dreams", status: "away" },
-  { username: "pixel_wizard", status: "online" },
-  { username: "code_ninja", status: "busy" },
-  { username: "vaporwave_fan", status: "online" },
-];
-
-const mockMessages: Message[] = [
-  { id: "1", user: "system", text: "Welcome to #general! Be respectful and have fun.", timestamp: new Date(Date.now() - 3600000), type: "system" },
-  { id: "2", user: "cyber_punk_77", text: "hey everyone! what's up?", timestamp: new Date(Date.now() - 1800000), type: "message" },
-  { id: "3", user: "retro_gamer", text: "just vibing, coding some stuff", timestamp: new Date(Date.now() - 1200000), type: "message" },
-  { id: "4", user: "pixel_wizard", text: "working on a new pixel art project!", timestamp: new Date(Date.now() - 600000), type: "message" },
-];
+interface Room {
+  name: string;
+  topic: string;
+}
 
 const Chat = () => {
   const navigate = useNavigate();
   const { roomId } = useParams();
-  const [username, setUsername] = useState("");
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [members, setMembers] = useState<RoomMember[]>([]);
+  const [room, setRoom] = useState<Room | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const storedUsername = localStorage.getItem("retro-username");
-    if (!storedUsername) {
-      navigate("/");
-    } else {
-      setUsername(storedUsername);
-      // Add join message
-      const joinMessage: Message = {
-        id: Date.now().toString(),
-        user: "system",
-        text: `${storedUsername} has joined the chat`,
-        timestamp: new Date(),
-        type: "system",
-      };
-      setMessages((prev) => [...prev, joinMessage]);
+    if (!authLoading && !user) {
+      navigate("/auth");
     }
-  }, [navigate]);
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user && roomId) {
+      fetchRoom();
+      fetchMessages();
+      fetchMembers();
+      subscribeToMessages();
+      subscribeToMembers();
+    }
+  }, [user, roomId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (!message.trim()) return;
+  const fetchRoom = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("rooms")
+        .select("name, topic")
+        .eq("id", roomId)
+        .single();
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      user: username,
-      text: message,
-      timestamp: new Date(),
-      type: "message",
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-    setMessage("");
+      if (error) throw error;
+      setRoom(data);
+    } catch (error: any) {
+      toast({
+        title: "Error loading room",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  const fetchMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("messages")
+        .select(`
+          *,
+          profiles (
+            username
+          )
+        `)
+        .eq("room_id", roomId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      setMessages(data || []);
+    } catch (error: any) {
+      console.error("Error fetching messages:", error);
+    }
+  };
+
+  const fetchMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("room_members")
+        .select(`
+          profiles (
+            username,
+            status
+          )
+        `)
+        .eq("room_id", roomId);
+
+      if (error) throw error;
+      setMembers(data || []);
+    } catch (error: any) {
+      console.error("Error fetching members:", error);
+    }
+  };
+
+  const subscribeToMessages = () => {
+    const channel = supabase
+      .channel(`room-${roomId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `room_id=eq.${roomId}`,
+        },
+        async (payload) => {
+          const { data } = await supabase
+            .from("messages")
+            .select(`
+              *,
+              profiles (
+                username
+              )
+            `)
+            .eq("id", payload.new.id)
+            .single();
+
+          if (data) {
+            setMessages((prev) => [...prev, data]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  const subscribeToMembers = () => {
+    const channel = supabase
+      .channel(`room-members-${roomId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "room_members",
+          filter: `room_id=eq.${roomId}`,
+        },
+        () => {
+          fetchMembers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  const handleSendMessage = async () => {
+    if (!message.trim() || !user) return;
+
+    try {
+      const { error } = await supabase.from("messages").insert({
+        room_id: roomId,
+        user_id: user.id,
+        content: message,
+        type: "message",
+      });
+
+      if (error) throw error;
+      setMessage("");
+    } catch (error: any) {
+      toast({
+        title: "Error sending message",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -96,22 +219,33 @@ const Chat = () => {
     }
   };
 
+  if (authLoading || !room) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <p className="text-primary animate-flicker">Loading...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col scanline">
       {/* Header */}
       <div className="border-b-2 border-primary bg-card p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" onClick={() => navigate("/rooms")}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/rooms")}
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center gap-2">
               <Hash className="h-5 w-5 text-primary text-glow-cyan" />
-              <h1 className="text-xl font-bold text-foreground">general</h1>
+              <h1 className="text-xl font-bold text-foreground">
+                {room.name}
+              </h1>
             </div>
-          </div>
-          <div className="text-sm text-muted-foreground">
-            <span className="text-accent">{username}</span>
           </div>
         </div>
       </div>
@@ -126,25 +260,33 @@ const Chat = () => {
                 {msg.type === "system" ? (
                   <div className="text-center">
                     <span className="text-xs text-muted-foreground bg-muted px-3 py-1 inline-block border border-border">
-                      {msg.text}
+                      {msg.content}
                     </span>
                   </div>
                 ) : (
                   <div className="group hover:bg-muted/30 p-2 -mx-2 transition-colors">
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 rounded-none bg-primary/20 border border-primary flex items-center justify-center text-primary font-bold text-sm">
-                        {msg.user[0].toUpperCase()}
+                        {msg.profiles.username[0].toUpperCase()}
                       </div>
                       <div className="flex-1 space-y-1">
                         <div className="flex items-baseline gap-2">
-                          <span className={`font-bold text-sm ${msg.user === username ? "text-secondary" : "text-primary"}`}>
-                            {msg.user}
+                          <span
+                            className={`font-bold text-sm ${
+                              msg.user_id === user?.id
+                                ? "text-secondary"
+                                : "text-primary"
+                            }`}
+                          >
+                            {msg.profiles.username}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {formatTime(msg.timestamp)}
+                            {formatTime(msg.created_at)}
                           </span>
                         </div>
-                        <p className="text-sm text-foreground break-words">{msg.text}</p>
+                        <p className="text-sm text-foreground break-words">
+                          {msg.content}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -176,19 +318,28 @@ const Chat = () => {
           <div className="p-4 border-b-2 border-border">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              <h2 className="font-bold text-foreground">Online ({mockUsers.length})</h2>
+              <h2 className="font-bold text-foreground">
+                Online ({members.length})
+              </h2>
             </div>
           </div>
-          <div className="p-2 space-y-1 overflow-y-auto" style={{ maxHeight: "calc(100vh - 140px)" }}>
-            {mockUsers.map((user) => (
+          <div
+            className="p-2 space-y-1 overflow-y-auto"
+            style={{ maxHeight: "calc(100vh - 140px)" }}
+          >
+            {members.map((member, idx) => (
               <div
-                key={user.username}
+                key={idx}
                 className="p-2 hover:bg-muted/30 transition-colors cursor-pointer group"
               >
                 <div className="flex items-center gap-2">
-                  <Circle className={`h-2 w-2 fill-current ${getStatusColor(user.status)}`} />
+                  <Circle
+                    className={`h-2 w-2 fill-current ${getStatusColor(
+                      member.profiles.status
+                    )}`}
+                  />
                   <span className="text-sm text-foreground group-hover:text-primary transition-colors">
-                    {user.username}
+                    {member.profiles.username}
                   </span>
                 </div>
               </div>

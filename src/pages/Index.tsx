@@ -10,8 +10,7 @@ const Index = () => {
 
   const handleJoin = () => {
     if (username.trim()) {
-      localStorage.setItem("retro-username", username);
-      navigate("/rooms");
+      navigate("/auth");
     }
   };
 

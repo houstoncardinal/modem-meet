@@ -4,56 +4,121 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Hash, Users, TrendingUp, MessageCircle, Search, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { CreateRoomDialog } from "@/components/CreateRoomDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface Room {
   id: string;
   name: string;
   topic: string;
-  users: number;
   category: string;
+  is_private: boolean;
 }
 
-const mockRooms: Room[] = [
-  { id: "1", name: "general", topic: "General discussion & vibes", users: 847, category: "General" },
-  { id: "2", name: "tech-talk", topic: "Technology & coding", users: 523, category: "Technology" },
-  { id: "3", name: "music-lounge", topic: "Share your favorite tunes", users: 412, category: "Entertainment" },
-  { id: "4", name: "gaming-zone", topic: "PC, console & mobile gaming", users: 689, category: "Gaming" },
-  { id: "5", name: "art-corner", topic: "Digital & traditional art", users: 234, category: "Creative" },
-  { id: "6", name: "late-night", topic: "Night owls unite", users: 156, category: "General" },
-  { id: "7", name: "meme-factory", topic: "Dank memes only", users: 934, category: "Entertainment" },
-  { id: "8", name: "study-group", topic: "Focus & productivity", users: 312, category: "Education" },
-];
+interface Profile {
+  username: string;
+}
 
 const Rooms = () => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const { user, loading: authLoading, signOut } = useAuth();
+  const { toast } = useToast();
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUsername = localStorage.getItem("retro-username");
-    if (!storedUsername) {
-      navigate("/");
-    } else {
-      setUsername(storedUsername);
+    if (!authLoading && !user) {
+      navigate("/auth");
     }
-  }, [navigate]);
+  }, [user, authLoading, navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("retro-username");
-    navigate("/");
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+      fetchRooms();
+    }
+  }, [user]);
+
+  const fetchProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", user?.id)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error: any) {
+      console.error("Error fetching profile:", error);
+    }
   };
 
-  const filteredRooms = mockRooms.filter((room) => {
-    const matchesSearch = room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         room.topic.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || room.category === selectedCategory;
+  const fetchRooms = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("rooms")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setRooms(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error loading rooms",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoinRoom = async (roomId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from("room_members")
+        .upsert({ room_id: roomId, user_id: user.id });
+
+      if (error) throw error;
+      navigate(`/chat/${roomId}`);
+    } catch (error: any) {
+      toast({
+        title: "Error joining room",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredRooms = rooms.filter((room) => {
+    const matchesSearch =
+      room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      room.topic?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "All" || room.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const categories = ["All", ...Array.from(new Set(mockRooms.map((r) => r.category)))];
+  const categories = [
+    "All",
+    ...Array.from(new Set(rooms.map((r) => r.category))),
+  ];
 
-  const totalUsers = mockRooms.reduce((sum, room) => sum + room.users, 0);
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-primary animate-flicker">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 scanline">
@@ -66,13 +131,17 @@ const Rooms = () => {
                 CHAT ROOMS
               </h1>
               <p className="text-sm text-muted-foreground">
-                Logged in as: <span className="text-accent">{username}</span>
+                Logged in as:{" "}
+                <span className="text-accent">{profile?.username}</span>
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Disconnect
-            </Button>
+            <div className="flex gap-2">
+              <CreateRoomDialog onRoomCreated={fetchRooms} />
+              <Button variant="outline" size="sm" onClick={signOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Disconnect
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -80,19 +149,23 @@ const Rooms = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card className="border-2 border-primary bg-card p-4">
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
+              <Hash className="h-5 w-5 text-primary" />
               <div>
-                <div className="text-xl font-bold text-accent">{totalUsers}</div>
-                <div className="text-xs text-muted-foreground">Total Users</div>
+                <div className="text-xl font-bold text-accent">
+                  {rooms.length}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Total Rooms
+                </div>
               </div>
             </div>
           </Card>
           <Card className="border-2 border-secondary bg-card p-4">
             <div className="flex items-center gap-2">
-              <Hash className="h-5 w-5 text-secondary" />
+              <Users className="h-5 w-5 text-secondary" />
               <div>
-                <div className="text-xl font-bold text-accent">{mockRooms.length}</div>
-                <div className="text-xs text-muted-foreground">Active Rooms</div>
+                <div className="text-xl font-bold text-accent">LIVE</div>
+                <div className="text-xs text-muted-foreground">Online</div>
               </div>
             </div>
           </Card>
@@ -100,7 +173,7 @@ const Rooms = () => {
             <div className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-accent" />
               <div>
-                <div className="text-xl font-bold text-accent">LIVE</div>
+                <div className="text-xl font-bold text-accent">ACTIVE</div>
                 <div className="text-xs text-muted-foreground">Status</div>
               </div>
             </div>
@@ -109,7 +182,9 @@ const Rooms = () => {
             <div className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5 text-primary" />
               <div>
-                <div className="text-xl font-bold text-accent animate-flicker">ON</div>
+                <div className="text-xl font-bold text-accent animate-flicker">
+                  ON
+                </div>
                 <div className="text-xs text-muted-foreground">Messages</div>
               </div>
             </div>
@@ -127,12 +202,14 @@ const Rooms = () => {
               className="pl-10 border-2 border-border bg-background rounded-none"
             />
           </div>
-          
+
           <div className="flex flex-wrap gap-2">
             {categories.map((category) => (
               <Button
                 key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
+                variant={
+                  selectedCategory === category ? "default" : "outline"
+                }
                 size="sm"
                 onClick={() => setSelectedCategory(category)}
               >
@@ -148,7 +225,7 @@ const Rooms = () => {
             <Card
               key={room.id}
               className="border-2 border-primary bg-card p-4 hover:border-secondary transition-all cursor-pointer group"
-              onClick={() => navigate(`/chat/${room.id}`)}
+              onClick={() => handleJoinRoom(room.id)}
             >
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
@@ -158,16 +235,17 @@ const Rooms = () => {
                       {room.name}
                     </h3>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-accent">
-                    <Users className="h-3 w-3" />
-                    <span>{room.users}</span>
-                  </div>
+                  {room.is_private && (
+                    <span className="text-xs text-secondary uppercase">
+                      Private
+                    </span>
+                  )}
                 </div>
-                
+
                 <p className="text-sm text-muted-foreground line-clamp-1">
-                  {room.topic}
+                  {room.topic || "No topic set"}
                 </p>
-                
+
                 <div className="flex items-center justify-between pt-2 border-t border-border">
                   <span className="text-xs text-muted-foreground uppercase">
                     {room.category}
@@ -183,7 +261,9 @@ const Rooms = () => {
 
         {filteredRooms.length === 0 && (
           <div className="border-2 border-border bg-card p-12 text-center">
-            <p className="text-muted-foreground">No rooms found matching your search.</p>
+            <p className="text-muted-foreground">
+              No rooms found matching your search.
+            </p>
           </div>
         )}
       </div>
