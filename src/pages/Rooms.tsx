@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Hash, Users, TrendingUp, MessageCircle, Search, LogOut } from "lucide-react";
+import { Hash, Users, TrendingUp, MessageCircle, Search, LogOut, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CreateRoomDialog } from "@/components/CreateRoomDialog";
@@ -136,6 +136,14 @@ const Rooms = () => {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate(`/profile/${user?.id}`)}
+              >
+                <User className="mr-2 h-4 w-4" />
+                My Profile
+              </Button>
               <CreateRoomDialog onRoomCreated={fetchRooms} />
               <Button variant="outline" size="sm" onClick={signOut}>
                 <LogOut className="mr-2 h-4 w-4" />

@@ -19,6 +19,7 @@ interface Message {
 }
 
 interface RoomMember {
+  user_id: string;
   profiles: {
     username: string;
     status: string;
@@ -105,6 +106,7 @@ const Chat = () => {
       const { data, error } = await supabase
         .from("room_members")
         .select(`
+          user_id,
           profiles (
             username,
             status
@@ -266,20 +268,24 @@ const Chat = () => {
                 ) : (
                   <div className="group hover:bg-muted/30 p-2 -mx-2 transition-colors">
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-none bg-primary/20 border border-primary flex items-center justify-center text-primary font-bold text-sm">
+                      <button
+                        onClick={() => navigate(`/profile/${msg.user_id}`)}
+                        className="w-8 h-8 rounded-none bg-primary/20 border border-primary flex items-center justify-center text-primary font-bold text-sm hover:border-secondary transition-colors"
+                      >
                         {msg.profiles.username[0].toUpperCase()}
-                      </div>
+                      </button>
                       <div className="flex-1 space-y-1">
                         <div className="flex items-baseline gap-2">
-                          <span
-                            className={`font-bold text-sm ${
+                          <button
+                            onClick={() => navigate(`/profile/${msg.user_id}`)}
+                            className={`font-bold text-sm hover:underline ${
                               msg.user_id === user?.id
                                 ? "text-secondary"
                                 : "text-primary"
                             }`}
                           >
                             {msg.profiles.username}
-                          </span>
+                          </button>
                           <span className="text-xs text-muted-foreground">
                             {formatTime(msg.created_at)}
                           </span>
@@ -328,9 +334,10 @@ const Chat = () => {
             style={{ maxHeight: "calc(100vh - 140px)" }}
           >
             {members.map((member, idx) => (
-              <div
+              <button
                 key={idx}
-                className="p-2 hover:bg-muted/30 transition-colors cursor-pointer group"
+                onClick={() => navigate(`/profile/${member.user_id}`)}
+                className="w-full p-2 hover:bg-muted/30 transition-colors group text-left"
               >
                 <div className="flex items-center gap-2">
                   <Circle
@@ -342,7 +349,7 @@ const Chat = () => {
                     {member.profiles.username}
                   </span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
