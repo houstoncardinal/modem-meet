@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Zap } from "lucide-react";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -69,8 +70,9 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 scanline">
-      <Card className="w-full max-w-md border-2 border-primary bg-card p-8 space-y-6">
+    <div className="min-h-screen flex items-center justify-center p-4 scanline relative">
+      <AnimatedBackground />
+      <Card className="w-full max-w-md border-2 border-primary bg-card p-8 space-y-6 relative z-10">
         <div>
           <h1 className="text-2xl font-bold text-primary text-glow-cyan">
             {isSignUp ? "CREATE ACCOUNT" : "LOGIN"}
@@ -155,14 +157,17 @@ const Auth = () => {
           </button>
         </div>
 
-        <div className="pt-4 border-t border-border">
+        <div className="pt-4 border-t border-border space-y-2">
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors block"
           >
             ← Back to home
           </button>
+          <p className="text-xs text-muted-foreground">
+            By signing up, you agree to create an account and join the ChatLink community.
+          </p>
         </div>
       </Card>
     </div>

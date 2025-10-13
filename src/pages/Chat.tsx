@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Users, Hash, Circle } from "lucide-react";
+import { ArrowLeft, Send, Users, Hash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { UserAvatar } from "@/components/UserAvatar";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 
 interface Message {
   id: string;
@@ -15,6 +17,7 @@ interface Message {
   created_at: string;
   profiles: {
     username: string;
+    avatar_url: string | null;
   };
 }
 
@@ -22,6 +25,7 @@ interface RoomMember {
   user_id: string;
   profiles: {
     username: string;
+    avatar_url: string | null;
     status: string;
   };
 }
@@ -88,7 +92,8 @@ const Chat = () => {
         .select(`
           *,
           profiles (
-            username
+            username,
+            avatar_url
           )
         `)
         .eq("room_id", roomId)
@@ -109,6 +114,7 @@ const Chat = () => {
           user_id,
           profiles (
             username,
+            avatar_url,
             status
           )
         `)
@@ -138,7 +144,8 @@ const Chat = () => {
             .select(`
               *,
               profiles (
-                username
+                username,
+                avatar_url
               )
             `)
             .eq("id", payload.new.id)
@@ -230,7 +237,8 @@ const Chat = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col scanline">
+    <div className="h-screen flex flex-col scanline relative">
+      <AnimatedBackground />
       {/* Header */}
       <div className="border-b-2 border-primary bg-card p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -252,7 +260,7 @@ const Chat = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden max-w-7xl mx-auto w-full">
+      <div className="flex-1 flex overflow-hidden max-w-7xl mx-auto w-full relative z-10">
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col">
           {/* Messages */}
@@ -268,12 +276,12 @@ const Chat = () => {
                 ) : (
                   <div className="group hover:bg-muted/30 p-2 -mx-2 transition-colors">
                     <div className="flex items-start gap-3">
-                      <button
+                      <UserAvatar
+                        username={msg.profiles.username}
+                        avatarUrl={msg.profiles.avatar_url}
+                        size="md"
                         onClick={() => navigate(`/profile/${msg.user_id}`)}
-                        className="w-8 h-8 rounded-none bg-primary/20 border border-primary flex items-center justify-center text-primary font-bold text-sm hover:border-secondary transition-colors"
-                      >
-                        {msg.profiles.username[0].toUpperCase()}
-                      </button>
+                      />
                       <div className="flex-1 space-y-1">
                         <div className="flex items-baseline gap-2">
                           <button
@@ -340,10 +348,10 @@ const Chat = () => {
                 className="w-full p-2 hover:bg-muted/30 transition-colors group text-left"
               >
                 <div className="flex items-center gap-2">
-                  <Circle
-                    className={`h-2 w-2 fill-current ${getStatusColor(
-                      member.profiles.status
-                    )}`}
+                  <UserAvatar
+                    username={member.profiles.username}
+                    avatarUrl={member.profiles.avatar_url}
+                    size="sm"
                   />
                   <span className="text-sm text-foreground group-hover:text-primary transition-colors">
                     {member.profiles.username}

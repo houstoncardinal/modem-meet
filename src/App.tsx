@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Rooms from "./pages/Rooms";
 import Chat from "./pages/Chat";
 import Profile from "./pages/Profile";
+import DirectMessages from "./pages/DirectMessages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/rooms" element={<Rooms />} />
           <Route path="/chat/:roomId" element={<Chat />} />
           <Route path="/profile/:userId" element={<Profile />} />
+          <Route path="/messages" element={<DirectMessages />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

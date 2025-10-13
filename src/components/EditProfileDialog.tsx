@@ -19,10 +19,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { AvatarUpload } from "@/components/AvatarUpload";
 
 interface Profile {
   id: string;
   username: string;
+  avatar_url: string | null;
   status: string;
   bio: string | null;
   interests: string[] | null;
@@ -124,6 +126,12 @@ export const EditProfileDialog = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <AvatarUpload
+            userId={profile.id}
+            currentAvatarUrl={profile.avatar_url}
+            onAvatarUpdate={onProfileUpdate}
+          />
+
           <div className="space-y-2">
             <label className="text-sm text-accent uppercase tracking-wider">
               Username

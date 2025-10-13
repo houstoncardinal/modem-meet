@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Hash, Users, TrendingUp, MessageCircle, Search, LogOut, User } from "lucide-react";
+import { Hash, Users, TrendingUp, MessageCircle, Search, LogOut, User, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CreateRoomDialog } from "@/components/CreateRoomDialog";
 import { useToast } from "@/hooks/use-toast";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 
 interface Room {
   id: string;
@@ -121,8 +122,9 @@ const Rooms = () => {
   }
 
   return (
-    <div className="min-h-screen p-4 scanline">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen p-4 scanline relative">
+      <AnimatedBackground />
+      <div className="max-w-7xl mx-auto space-y-6 relative z-10">
         {/* Header */}
         <div className="border-2 border-primary bg-card p-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -135,7 +137,7 @@ const Rooms = () => {
                 <span className="text-accent">{profile?.username}</span>
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant="secondary"
                 size="sm"
@@ -143,6 +145,14 @@ const Rooms = () => {
               >
                 <User className="mr-2 h-4 w-4" />
                 My Profile
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/messages")}
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                Messages
               </Button>
               <CreateRoomDialog onRoomCreated={fetchRooms} />
               <Button variant="outline" size="sm" onClick={signOut}>

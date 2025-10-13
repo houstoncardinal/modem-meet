@@ -1,22 +1,20 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MessageSquare, Users, Zap } from "lucide-react";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 
 const Index = () => {
-  const [username, setUsername] = useState("");
   const navigate = useNavigate();
 
   const handleJoin = () => {
-    if (username.trim()) {
-      navigate("/auth");
-    }
+    navigate("/auth");
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 scanline">
-      <div className="w-full max-w-2xl space-y-8 animate-slide-up">
+    <div className="min-h-screen flex items-center justify-center p-4 scanline relative">
+      <AnimatedBackground />
+      <div className="w-full max-w-2xl space-y-8 animate-slide-up relative z-10">
         {/* ASCII Art Logo */}
         <div className="text-center">
           <pre className="text-primary text-glow-cyan text-xs sm:text-sm md:text-base inline-block animate-flicker">
@@ -48,28 +46,13 @@ const Index = () => {
           </div>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm text-accent uppercase tracking-wider">
-                Username
-              </label>
-              <Input
-                type="text"
-                placeholder="enter_username_here"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleJoin()}
-                className="border-2 border-primary bg-background text-foreground placeholder:text-muted-foreground focus:border-secondary transition-colors rounded-none h-12"
-              />
-            </div>
-
             <Button
               onClick={handleJoin}
               size="lg"
               className="w-full"
-              disabled={!username.trim()}
             >
               <Zap className="mr-2 h-5 w-5" />
-              Connect Now
+              Get Started
             </Button>
           </div>
 

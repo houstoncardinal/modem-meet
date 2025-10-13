@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      conversations: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_message_at: string | null
+          user1_id: string
+          user2_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          user1_id: string
+          user2_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          user1_id?: string
+          user2_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_user1_id_fkey"
+            columns: ["user1_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_user2_id_fkey"
+            columns: ["user2_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      direct_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          read: boolean | null
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          read?: boolean | null
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          read?: boolean | null
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "direct_messages_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -63,6 +144,7 @@ export type Database = {
           created_at: string | null
           id: string
           interests: string[] | null
+          is_guest: boolean | null
           location: string | null
           status: string | null
           updated_at: string | null
@@ -75,6 +157,7 @@ export type Database = {
           created_at?: string | null
           id: string
           interests?: string[] | null
+          is_guest?: boolean | null
           location?: string | null
           status?: string | null
           updated_at?: string | null
@@ -87,6 +170,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           interests?: string[] | null
+          is_guest?: boolean | null
           location?: string | null
           status?: string | null
           updated_at?: string | null
@@ -177,7 +261,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_guest_profile: {
+        Args: { guest_username: string }
+        Returns: string
+      }
+      get_or_create_conversation: {
+        Args: { user1: string; user2: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
