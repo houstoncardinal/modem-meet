@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send, Users, Hash } from "lucide-react";
@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "@/components/UserAvatar";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
+import { RoomSettingsDialog } from "@/components/RoomSettingsDialog";
 
 interface Message {
   id: string;
@@ -23,6 +24,7 @@ interface Message {
 
 interface RoomMember {
   user_id: string;
+  role?: string;
   profiles: {
     username: string;
     avatar_url: string | null;
@@ -31,8 +33,12 @@ interface RoomMember {
 }
 
 interface Room {
+  id: string;
   name: string;
   topic: string;
+  is_private: boolean;
+  password?: string;
+  invite_code: string;
 }
 
 const Chat = () => {
@@ -44,6 +50,7 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [room, setRoom] = useState<Room | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,7 +77,7 @@ const Chat = () => {
     try {
       const { data, error } = await supabase
         .from("rooms")
-        .select("name, topic")
+        .select("id, name, topic, is_private, password, invite_code")
         .eq("id", roomId)
         .single();
 
@@ -112,6 +119,7 @@ const Chat = () => {
         .from("room_members")
         .select(`
           user_id,
+          role,
           profiles (
             username,
             avatar_url,
@@ -122,6 +130,10 @@ const Chat = () => {
 
       if (error) throw error;
       setMembers(data || []);
+      
+      // Set current user's role
+      const currentUserMember = data?.find(m => m.user_id === user?.id);
+      setUserRole(currentUserMember?.role || null);
     } catch (error: any) {
       console.error("Error fetching members:", error);
     }
@@ -256,6 +268,18 @@ const Chat = () => {
                 {room.name}
               </h1>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {room && (
+              <RoomSettingsDialog
+                roomId={room.id}
+                roomName={room.name}
+                isPrivate={room.is_private}
+                password={room.password}
+                inviteCode={room.invite_code}
+                userRole={userRole || undefined}
+              />
+            )}
           </div>
         </div>
       </div>

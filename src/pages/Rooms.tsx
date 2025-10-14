@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { CreateRoomDialog } from "@/components/CreateRoomDialog";
 import { useToast } from "@/hooks/use-toast";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
+import { JoinRoomDialog } from "@/components/JoinRoomDialog";
 
 interface Room {
   id: string;
@@ -16,6 +17,8 @@ interface Room {
   topic: string;
   category: string;
   is_private: boolean;
+  password?: string;
+  invite_code: string;
 }
 
 interface Profile {
@@ -31,6 +34,8 @@ const Rooms = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [loading, setLoading] = useState(true);
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -80,15 +85,54 @@ const Rooms = () => {
     }
   };
 
-  const handleJoinRoom = async (roomId: string) => {
+  const handleRoomClick = (room: Room) => {
+    setSelectedRoom(room);
+    if (room.password) {
+      setJoinDialogOpen(true);
+    } else {
+      handleJoinRoom(room.id);
+    }
+  };
+
+  const handleJoinRoom = async (roomId: string, password?: string) => {
     if (!user) return;
 
+    const room = rooms.find(r => r.id === roomId) || selectedRoom;
+    
+    // Check password if required
+    if (room?.password && room.password !== password) {
+      toast({
+        title: "Incorrect password",
+        description: "The password you entered is incorrect.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      // Check if already a member
+      const { data: existingMember } = await supabase
+        .from("room_members")
+        .select("id")
+        .eq("room_id", roomId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (existingMember) {
+        // Already a member, just navigate
+        navigate(`/chat/${roomId}`);
+        setJoinDialogOpen(false);
+        return;
+      }
+
+      // Join the room
       const { error } = await supabase
         .from("room_members")
-        .upsert({ room_id: roomId, user_id: user.id });
+        .insert({ room_id: roomId, user_id: user.id });
 
       if (error) throw error;
+      
+      setJoinDialogOpen(false);
       navigate(`/chat/${roomId}`);
     } catch (error: any) {
       toast({
@@ -243,7 +287,7 @@ const Rooms = () => {
             <Card
               key={room.id}
               className="border-2 border-primary bg-card p-4 hover:border-secondary transition-all cursor-pointer group"
-              onClick={() => handleJoinRoom(room.id)}
+              onClick={() => handleRoomClick(room)}
             >
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
@@ -285,6 +329,14 @@ const Rooms = () => {
           </div>
         )}
       </div>
+
+      <JoinRoomDialog
+        open={joinDialogOpen}
+        onOpenChange={setJoinDialogOpen}
+        onJoin={(password) => selectedRoom && handleJoinRoom(selectedRoom.id, password)}
+        roomName={selectedRoom?.name || ""}
+        requiresPassword={!!selectedRoom?.password}
+      />
     </div>
   );
 };

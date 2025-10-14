@@ -183,18 +183,21 @@ export type Database = {
         Row: {
           id: string
           joined_at: string | null
+          role: Database["public"]["Enums"]["room_role"] | null
           room_id: string
           user_id: string
         }
         Insert: {
           id?: string
           joined_at?: string | null
+          role?: Database["public"]["Enums"]["room_role"] | null
           room_id: string
           user_id: string
         }
         Update: {
           id?: string
           joined_at?: string | null
+          role?: Database["public"]["Enums"]["room_role"] | null
           room_id?: string
           user_id?: string
         }
@@ -221,8 +224,10 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           id: string
+          invite_code: string | null
           is_private: boolean | null
           name: string
+          password: string | null
           topic: string | null
           updated_at: string | null
         }
@@ -231,8 +236,10 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          invite_code?: string | null
           is_private?: boolean | null
           name: string
+          password?: string | null
           topic?: string | null
           updated_at?: string | null
         }
@@ -241,8 +248,10 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          invite_code?: string | null
           is_private?: boolean | null
           name?: string
+          password?: string | null
           topic?: string | null
           updated_at?: string | null
         }
@@ -269,9 +278,21 @@ export type Database = {
         Args: { user1: string; user2: string }
         Returns: string
       }
+      has_room_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["room_role"]
+          _room_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      regenerate_invite_code: {
+        Args: { _room_id: string }
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      room_role: "owner" | "admin" | "moderator" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -398,6 +419,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      room_role: ["owner", "admin", "moderator", "member"],
+    },
   },
 } as const

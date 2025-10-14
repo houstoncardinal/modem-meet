@@ -6,8 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus } from "lucide-react";
+import { Plus, Lock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const categories = ["General", "Technology", "Entertainment", "Gaming", "Creative", "Education"];
 
@@ -20,6 +21,7 @@ export const CreateRoomDialog = ({ onRoomCreated }: { onRoomCreated: () => void 
     topic: "",
     category: "General",
     isPrivate: false,
+    password: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,15 +32,27 @@ export const CreateRoomDialog = ({ onRoomCreated }: { onRoomCreated: () => void 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("rooms").insert({
+      const { data: room, error: roomError } = await supabase.from("rooms").insert({
         name: formData.name.toLowerCase().replace(/\s+/g, "-"),
         topic: formData.topic,
         category: formData.category,
         is_private: formData.isPrivate,
+        password: formData.password || null,
         created_by: user.id,
-      });
+      }).select().single();
 
-      if (error) throw error;
+      if (roomError) throw roomError;
+
+      // Add creator as room owner
+      const { error: memberError } = await supabase
+        .from("room_members")
+        .insert({
+          room_id: room.id,
+          user_id: user.id,
+          role: "owner",
+        });
+
+      if (memberError) throw memberError;
 
       toast({
         title: "Room created!",
@@ -46,7 +60,7 @@ export const CreateRoomDialog = ({ onRoomCreated }: { onRoomCreated: () => void 
       });
 
       setOpen(false);
-      setFormData({ name: "", topic: "", category: "General", isPrivate: false });
+      setFormData({ name: "", topic: "", category: "General", isPrivate: false, password: "" });
       onRoomCreated();
     } catch (error: any) {
       toast({
@@ -119,14 +133,30 @@ export const CreateRoomDialog = ({ onRoomCreated }: { onRoomCreated: () => void 
           </div>
 
           <div className="flex items-center justify-between">
-            <label className="text-sm text-accent uppercase tracking-wider">
+            <Label htmlFor="private" className="flex items-center gap-2">
+              <Lock className="h-4 w-4" />
               Private Room
-            </label>
+            </Label>
             <Switch
+              id="private"
               checked={formData.isPrivate}
               onCheckedChange={(checked) => setFormData({ ...formData, isPrivate: checked })}
             />
           </div>
+
+          {formData.isPrivate && (
+            <div className="space-y-2">
+              <Label htmlFor="password">Password (Optional)</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Leave empty for no password"
+                className="border-2 border-primary bg-background rounded-none"
+              />
+            </div>
+          )}
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Creating..." : "Create Room"}
