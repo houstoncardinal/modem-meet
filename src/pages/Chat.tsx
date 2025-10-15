@@ -341,7 +341,12 @@ const Chat = () => {
                 placeholder="type_message_here..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
                 className="border-2 border-primary bg-background rounded-none"
               />
               <Button onClick={handleSendMessage} size="icon">
