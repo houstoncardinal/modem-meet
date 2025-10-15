@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Link2, Copy, RefreshCw, Lock, Users } from "lucide-react";
+import { Settings, Link2, Copy, RefreshCw, Lock, Users, Ban } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { UserAvatar } from "./UserAvatar";
 
@@ -177,11 +177,52 @@ export const RoomSettingsDialog = ({
       await fetchMembers();
       toast({
         title: "Member removed",
-        description: "Member has been removed from the room.",
+        description: "Member has been kicked from the room.",
       });
     } catch (error: any) {
       toast({
         title: "Error removing member",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBanMember = async (memberId: string, userId: string, username: string) => {
+    if (!isOwnerOrAdmin) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // First, remove from room
+      const { error: removeError } = await supabase
+        .from("room_members")
+        .delete()
+        .eq("id", memberId);
+
+      if (removeError) throw removeError;
+
+      // Then add to banned list
+      const { error: banError } = await supabase
+        .from("banned_room_users")
+        .insert({
+          room_id: roomId,
+          user_id: userId,
+          banned_by: user.id,
+          reason: "Banned by moderator",
+        });
+
+      if (banError) throw banError;
+
+      await fetchMembers();
+      toast({
+        title: "Member banned",
+        description: `${username} has been banned from the room.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error banning member",
         description: error.message,
         variant: "destructive",
       });
@@ -329,9 +370,19 @@ export const RoomSettingsDialog = ({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveMember(member.id)}
-                          className="text-destructive"
+                          className="text-muted-foreground hover:text-foreground"
+                          title="Kick (can rejoin)"
                         >
-                          Remove
+                          Kick
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleBanMember(member.id, member.user_id, member.profiles.username)}
+                          className="text-destructive hover:text-destructive"
+                          title="Ban (cannot rejoin)"
+                        >
+                          <Ban className="h-4 w-4" />
                         </Button>
                       </div>
                     )}

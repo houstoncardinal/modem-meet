@@ -2,13 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Users, Hash } from "lucide-react";
+import { ArrowLeft, Send, Users, Hash, Paperclip } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "@/components/UserAvatar";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { RoomSettingsDialog } from "@/components/RoomSettingsDialog";
+import { MessageActions } from "@/components/MessageActions";
+import { FileUpload } from "@/components/FileUpload";
 
 interface Message {
   id: string;
@@ -16,6 +18,11 @@ interface Message {
   content: string;
   type: string;
   created_at: string;
+  edited_at: string | null;
+  deleted_at: string | null;
+  attachment_url: string | null;
+  attachment_name: string | null;
+  attachment_type: string | null;
   profiles: {
     username: string;
     avatar_url: string | null;
@@ -51,7 +58,10 @@ const Chat = () => {
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [room, setRoom] = useState<Room | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -92,9 +102,9 @@ const Chat = () => {
     }
   };
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (before?: string) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("messages")
         .select(`
           *,
@@ -104,14 +114,78 @@ const Chat = () => {
           )
         `)
         .eq("room_id", roomId)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (before) {
+        query = query.lt("created_at", before);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
-      setMessages(data || []);
+      
+      const sortedData = (data || []).reverse();
+      
+      if (before) {
+        setMessages((prev) => [...sortedData, ...prev]);
+        setHasMore(data.length === 50);
+      } else {
+        setMessages(sortedData);
+        setHasMore(data.length === 50);
+      }
     } catch (error: any) {
       console.error("Error fetching messages:", error);
     }
   };
+
+  const loadMoreMessages = async () => {
+    if (loadingMore || !hasMore || messages.length === 0) return;
+    
+    setLoadingMore(true);
+    const oldestMessage = messages[0];
+    await fetchMessages(oldestMessage.created_at);
+    setLoadingMore(false);
+  };
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      if (container.scrollTop === 0 && hasMore && !loadingMore) {
+        const scrollHeight = container.scrollHeight;
+        loadMoreMessages().then(() => {
+          // Maintain scroll position after loading more
+          container.scrollTop = container.scrollHeight - scrollHeight;
+        });
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [messages, hasMore, loadingMore]);
+
+  // Mark messages as read when viewing
+  useEffect(() => {
+    if (!user || !roomId || messages.length === 0) return;
+
+    const markAsRead = async () => {
+      const lastMessage = messages[messages.length - 1];
+      await supabase
+        .from("read_receipts")
+        .upsert({
+          room_id: roomId,
+          user_id: user.id,
+          last_read_at: new Date().toISOString(),
+          last_read_message_id: lastMessage.id,
+        }, {
+          onConflict: "room_id,user_id"
+        });
+    };
+
+    markAsRead();
+  }, [messages, user, roomId]);
 
   const fetchMembers = async () => {
     try {
@@ -197,15 +271,22 @@ const Chat = () => {
     };
   };
 
-  const handleSendMessage = async () => {
-    if (!message.trim() || !user) return;
+  const handleSendMessage = async (attachmentData?: {
+    url: string;
+    name: string;
+    type: string;
+  }) => {
+    if ((!message.trim() && !attachmentData) || !user) return;
 
     try {
       const { error } = await supabase.from("messages").insert({
         room_id: roomId,
         user_id: user.id,
-        content: message,
+        content: message || (attachmentData ? `Sent a file: ${attachmentData.name}` : ""),
         type: "message",
+        attachment_url: attachmentData?.url || null,
+        attachment_name: attachmentData?.name || null,
+        attachment_type: attachmentData?.type || null,
       });
 
       if (error) throw error;
@@ -288,7 +369,15 @@ const Chat = () => {
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col">
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div 
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto p-4 space-y-3"
+          >
+            {loadingMore && (
+              <div className="text-center py-2">
+                <p className="text-sm text-muted-foreground">Loading more messages...</p>
+              </div>
+            )}
             {messages.map((msg) => (
               <div key={msg.id}>
                 {msg.type === "system" ? (
@@ -321,10 +410,48 @@ const Chat = () => {
                           <span className="text-xs text-muted-foreground">
                             {formatTime(msg.created_at)}
                           </span>
+                          {msg.edited_at && (
+                            <span className="text-xs text-muted-foreground italic">
+                              (edited)
+                            </span>
+                          )}
+                          <div className="ml-auto">
+                            <MessageActions
+                              messageId={msg.id}
+                              content={msg.content}
+                              isOwnMessage={msg.user_id === user?.id}
+                              onEdit={() => fetchMessages()}
+                              onDelete={() => fetchMessages()}
+                            />
+                          </div>
                         </div>
-                        <p className="text-sm text-foreground break-words">
+                        <p className={`text-sm break-words ${
+                          msg.deleted_at ? "text-muted-foreground italic" : "text-foreground"
+                        }`}>
                           {msg.content}
                         </p>
+                        {msg.attachment_url && !msg.deleted_at && (
+                          <div className="mt-2">
+                            {msg.attachment_type?.startsWith("image/") ? (
+                              <img
+                                src={msg.attachment_url}
+                                alt={msg.attachment_name || "attachment"}
+                                className="max-w-sm rounded border border-border cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => window.open(msg.attachment_url!, "_blank")}
+                              />
+                            ) : (
+                              <a
+                                href={msg.attachment_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-sm text-primary hover:underline"
+                              >
+                                <Paperclip className="h-4 w-4" />
+                                {msg.attachment_name || "Download file"}
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -336,7 +463,12 @@ const Chat = () => {
 
           {/* Message Input */}
           <div className="border-t-2 border-primary bg-card p-4">
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-end">
+              <FileUpload
+                onFileUploaded={(url, name, type) =>
+                  handleSendMessage({ url, name, type })
+                }
+              />
               <Input
                 placeholder="type_message_here..."
                 value={message}
@@ -347,9 +479,9 @@ const Chat = () => {
                     handleSendMessage();
                   }
                 }}
-                className="border-2 border-primary bg-background rounded-none"
+                className="border-2 border-primary bg-background rounded-none flex-1"
               />
-              <Button onClick={handleSendMessage} size="icon">
+              <Button onClick={() => handleSendMessage()} size="icon">
                 <Send className="h-4 w-4" />
               </Button>
             </div>

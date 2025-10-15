@@ -10,6 +10,8 @@ import Chat from "./pages/Chat";
 import Profile from "./pages/Profile";
 import DirectMessages from "./pages/DirectMessages";
 import JoinWithCode from "./pages/JoinWithCode";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +30,8 @@ const App = () => (
           <Route path="/profile/:userId" element={<Profile />} />
           <Route path="/messages" element={<DirectMessages />} />
           <Route path="/join/:code" element={<JoinWithCode />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

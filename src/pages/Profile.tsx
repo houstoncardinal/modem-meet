@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, MapPin, Globe, Edit, MessageCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Globe, Edit, MessageCircle, Ban, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -31,14 +31,82 @@ const Profile = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
 
   const isOwnProfile = user?.id === userId;
 
   useEffect(() => {
     if (userId) {
       fetchProfile();
+      checkIfBlocked();
     }
   }, [userId]);
+
+  const checkIfBlocked = async () => {
+    if (!user || !userId || isOwnProfile) return;
+
+    try {
+      const { data } = await supabase
+        .from("blocked_users")
+        .select("id")
+        .eq("blocker_id", user.id)
+        .eq("blocked_id", userId)
+        .maybeSingle();
+
+      setIsBlocked(!!data);
+    } catch (error) {
+      console.error("Error checking block status:", error);
+    }
+  };
+
+  const handleBlockToggle = async () => {
+    if (!user || !userId) return;
+
+    setBlockLoading(true);
+    try {
+      if (isBlocked) {
+        // Unblock
+        const { error } = await supabase
+          .from("blocked_users")
+          .delete()
+          .eq("blocker_id", user.id)
+          .eq("blocked_id", userId);
+
+        if (error) throw error;
+
+        toast({
+          title: "User unblocked",
+          description: `You can now see messages from ${profile?.username}.`,
+        });
+        setIsBlocked(false);
+      } else {
+        // Block
+        const { error } = await supabase
+          .from("blocked_users")
+          .insert({
+            blocker_id: user.id,
+            blocked_id: userId,
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: "User blocked",
+          description: `You will no longer see messages from ${profile?.username}.`,
+        });
+        setIsBlocked(true);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setBlockLoading(false);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -131,14 +199,34 @@ const Profile = () => {
           </Button>
           <div className="flex gap-2">
             {!isOwnProfile && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleStartDM}
-              >
-                <MessageCircle className="mr-2 h-4 w-4" />
-                Message
-              </Button>
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleStartDM}
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  Message
+                </Button>
+                <Button
+                  variant={isBlocked ? "outline" : "destructive"}
+                  size="sm"
+                  onClick={handleBlockToggle}
+                  disabled={blockLoading}
+                >
+                  {isBlocked ? (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Unblock
+                    </>
+                  ) : (
+                    <>
+                      <Ban className="mr-2 h-4 w-4" />
+                      Block
+                    </>
+                  )}
+                </Button>
+              </>
             )}
             {isOwnProfile && (
               <Button

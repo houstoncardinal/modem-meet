@@ -19,6 +19,7 @@ interface Room {
   is_private: boolean;
   password?: string;
   invite_code: string;
+  unreadCount?: number;
 }
 
 interface Profile {
@@ -73,7 +74,41 @@ const Rooms = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setRooms(data || []);
+      
+      // Fetch unread counts for each room
+      if (user) {
+        const roomsWithUnread = await Promise.all(
+          (data || []).map(async (room) => {
+            const { data: receipt } = await supabase
+              .from("read_receipts")
+              .select("last_read_at")
+              .eq("room_id", room.id)
+              .eq("user_id", user.id)
+              .maybeSingle();
+
+            if (!receipt) {
+              // No read receipt, count all messages
+              const { count } = await supabase
+                .from("messages")
+                .select("*", { count: "exact", head: true })
+                .eq("room_id", room.id);
+              return { ...room, unreadCount: count || 0 };
+            }
+
+            // Count messages after last read
+            const { count } = await supabase
+              .from("messages")
+              .select("*", { count: "exact", head: true })
+              .eq("room_id", room.id)
+              .gt("created_at", receipt.last_read_at);
+
+            return { ...room, unreadCount: count || 0 };
+          })
+        );
+        setRooms(roomsWithUnread);
+      } else {
+        setRooms(data || []);
+      }
     } catch (error: any) {
       toast({
         title: "Error loading rooms",
@@ -296,6 +331,11 @@ const Rooms = () => {
                     <h3 className="text-lg font-bold text-foreground group-hover:text-glow-cyan transition-all">
                       {room.name}
                     </h3>
+                    {room.unreadCount && room.unreadCount > 0 && (
+                      <span className="bg-destructive text-destructive-foreground text-xs font-bold px-2 py-0.5 rounded-full">
+                        {room.unreadCount}
+                      </span>
+                    )}
                   </div>
                   {room.is_private && (
                     <span className="text-xs text-secondary uppercase">
