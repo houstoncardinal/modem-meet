@@ -20,62 +20,55 @@ const MobileNav = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
-      {/* Glow effect background */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none" />
+      {/* Scanline effect overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/98 to-transparent pointer-events-none scanline opacity-30" />
       
-      {/* Main nav container with 3D effect */}
-      <div className="relative border-t-2 border-primary/30 bg-gradient-to-b from-card/98 to-card backdrop-blur-xl supports-[backdrop-filter]:bg-card/95">
-        {/* Top glow line */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-pulse" />
+      {/* Main nav container - Terminal aesthetic */}
+      <div className="relative border-t-2 border-primary bg-background/95 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+        {/* Top glow line - sharp neon effect */}
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent shadow-[0_0_8px_hsl(var(--primary))]" />
         
-        <div className="flex items-center justify-around h-20 max-w-lg mx-auto px-2">
+        {/* Grid pattern background for retro feel */}
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+          backgroundSize: '20px 20px'
+        }} />
+        
+        <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
           {navItems.map((item, index) => (
             <NavLink
               key={item.to}
               to={item.to}
-              className={({ isActive }) =>
-                `relative flex flex-col items-center justify-center w-full h-14 transition-all duration-300 group ${
-                  isActive ? "scale-105" : "scale-100 hover:scale-105"
-                }`
-              }
-              style={{ animationDelay: `${index * 50}ms` }}
+              className="relative flex flex-col items-center justify-center w-full h-12 transition-all duration-200 group"
             >
               {({ isActive }) => (
                 <>
-                  {/* 3D Card background */}
+                  {/* Sharp terminal box */}
                   <div
-                    className={`absolute inset-1 rounded-2xl transition-all duration-300 ${
+                    className={`absolute inset-1 transition-all duration-200 ${
                       isActive
-                        ? "bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border-2 border-primary/50 shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] scale-100"
-                        : "bg-gradient-to-br from-muted/40 to-muted/20 border border-border/30 group-hover:border-primary/30 group-hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)] scale-95 group-hover:scale-100"
+                        ? "bg-primary/10 border-2 border-primary shadow-[0_0_12px_hsl(var(--primary)/0.5),inset_0_0_12px_hsl(var(--primary)/0.2)]"
+                        : "bg-card/30 border border-border group-hover:border-primary/50 group-hover:bg-primary/5 group-hover:shadow-[0_0_8px_hsl(var(--primary)/0.3)]"
                     }`}
                   />
                   
-                  {/* Inset shadow for depth */}
-                  <div
-                    className={`absolute inset-1 rounded-2xl transition-all duration-300 ${
-                      isActive
-                        ? "shadow-[inset_0_2px_8px_rgba(0,0,0,0.3)]"
-                        : "shadow-[inset_0_1px_4px_rgba(0,0,0,0.2)] group-hover:shadow-[inset_0_2px_6px_rgba(0,0,0,0.25)]"
-                    }`}
-                  />
-                  
-                  {/* Active indicator glow */}
+                  {/* Terminal top bar accent */}
                   {isActive && (
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-transparent via-primary to-transparent rounded-full animate-pulse" />
+                    <div className="absolute top-1 left-1 right-1 h-[2px] bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
                   )}
                   
-                  {/* Content */}
-                  <div className="relative z-10 flex flex-col items-center gap-1">
+                  {/* Content - Terminal style */}
+                  <div className="relative z-10 flex flex-col items-center gap-0.5">
                     <item.icon
-                      className={`h-5 w-5 transition-all duration-300 ${
+                      className={`h-5 w-5 transition-all duration-200 ${
                         isActive
-                          ? "text-primary drop-shadow-[0_0_8px_rgba(var(--primary-rgb),0.6)]"
-                          : "text-muted-foreground group-hover:text-foreground group-hover:drop-shadow-[0_0_6px_rgba(var(--primary-rgb),0.4)]"
+                          ? "text-primary text-glow-cyan"
+                          : "text-muted-foreground group-hover:text-primary/80"
                       }`}
+                      strokeWidth={isActive ? 2.5 : 2}
                     />
                     <span
-                      className={`text-[10px] font-medium transition-all duration-300 ${
+                      className={`text-[9px] font-mono uppercase tracking-wider transition-all duration-200 ${
                         isActive
                           ? "text-primary font-bold"
                           : "text-muted-foreground group-hover:text-foreground"
@@ -85,9 +78,9 @@ const MobileNav = () => {
                     </span>
                   </div>
                   
-                  {/* Ripple effect on click */}
-                  <div className="absolute inset-0 rounded-2xl overflow-hidden">
-                    <div className="absolute inset-0 bg-primary/10 scale-0 group-active:scale-100 transition-transform duration-300 rounded-2xl" />
+                  {/* Sharp click effect */}
+                  <div className="absolute inset-0 overflow-hidden">
+                    <div className="absolute inset-0 bg-primary/20 scale-0 group-active:scale-100 transition-transform duration-150" />
                   </div>
                 </>
               )}
@@ -95,8 +88,8 @@ const MobileNav = () => {
           ))}
         </div>
         
-        {/* Bottom gradient fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-b from-transparent to-background/50" />
+        {/* Bottom terminal line */}
+        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-border" />
       </div>
     </nav>
   );
