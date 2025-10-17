@@ -12,6 +12,7 @@ import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { RoomSettingsDialog } from "@/components/RoomSettingsDialog";
 import { MessageActions } from "@/components/MessageActions";
 import { FileUpload } from "@/components/FileUpload";
+import { z } from "zod";
 
 interface Message {
   id: string;
@@ -287,6 +288,20 @@ const Chat = () => {
     if ((!message.trim() && !attachmentData) || !user) return;
 
     try {
+      // Validate message content if present
+      if (message.trim()) {
+        const messageSchema = z.string().trim().min(1, "Message cannot be empty").max(5000, "Message must be less than 5000 characters");
+        const validation = messageSchema.safeParse(message);
+        if (!validation.success) {
+          toast({
+            title: "Invalid message",
+            description: validation.error.errors[0].message,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       // Check rate limit (10 messages per minute)
       const { data: rateLimit } = await supabase
         .from("message_rate_limit")
