@@ -1,13 +1,21 @@
-import { NavLink } from "react-router-dom";
-import { Home, Compass, MessageSquare, User, Settings } from "lucide-react";
+import { NavLink, useLocation } from "react-router-dom";
+import { Home, Compass, MessageCircle, Mail, User } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const MobileNav = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  // Don't show on auth or landing pages
+  if (!user || location.pathname === "/" || location.pathname === "/auth") {
+    return null;
+  }
+
   const navItems = [
-    { to: "/", icon: Home, label: "Home" },
+    { to: "/rooms", icon: Home, label: "Rooms" },
     { to: "/explore", icon: Compass, label: "Explore" },
-    { to: "/rooms", icon: MessageSquare, label: "Rooms" },
-    { to: "/messages", icon: MessageSquare, label: "Messages" },
-    { to: "/profile", icon: User, label: "Profile" },
+    { to: "/messages", icon: Mail, label: "Messages" },
+    { to: `/profile/${user.id}`, icon: User, label: "Profile" },
   ];
 
   return (
