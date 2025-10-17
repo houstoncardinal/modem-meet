@@ -76,8 +76,14 @@ const Chat = () => {
       fetchRoom();
       fetchMessages();
       fetchMembers();
-      subscribeToMessages();
-      subscribeToMembers();
+      
+      const messagesCleanup = subscribeToMessages();
+      const membersCleanup = subscribeToMembers();
+      
+      return () => {
+        messagesCleanup();
+        membersCleanup();
+      };
     }
   }, [user, roomId]);
 
