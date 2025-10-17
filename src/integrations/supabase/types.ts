@@ -151,6 +151,38 @@ export type Database = {
           },
         ]
       }
+      message_rate_limit: {
+        Row: {
+          id: string
+          message_count: number | null
+          room_id: string | null
+          user_id: string
+          window_start: string | null
+        }
+        Insert: {
+          id?: string
+          message_count?: number | null
+          room_id?: string | null
+          user_id: string
+          window_start?: string | null
+        }
+        Update: {
+          id?: string
+          message_count?: number | null
+          room_id?: string | null
+          user_id?: string
+          window_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_rate_limit_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           attachment_name: string | null
@@ -161,6 +193,7 @@ export type Database = {
           deleted_at: string | null
           edited_at: string | null
           id: string
+          is_system: boolean | null
           room_id: string
           type: string | null
           user_id: string
@@ -174,6 +207,7 @@ export type Database = {
           deleted_at?: string | null
           edited_at?: string | null
           id?: string
+          is_system?: boolean | null
           room_id: string
           type?: string | null
           user_id: string
@@ -187,6 +221,7 @@ export type Database = {
           deleted_at?: string | null
           edited_at?: string | null
           id?: string
+          is_system?: boolean | null
           room_id?: string
           type?: string | null
           user_id?: string
@@ -216,6 +251,7 @@ export type Database = {
           id: string
           interests: string[] | null
           is_guest: boolean | null
+          last_seen: string | null
           location: string | null
           status: string | null
           updated_at: string | null
@@ -229,6 +265,7 @@ export type Database = {
           id: string
           interests?: string[] | null
           is_guest?: boolean | null
+          last_seen?: string | null
           location?: string | null
           status?: string | null
           updated_at?: string | null
@@ -242,6 +279,7 @@ export type Database = {
           id?: string
           interests?: string[] | null
           is_guest?: boolean | null
+          last_seen?: string | null
           location?: string | null
           status?: string | null
           updated_at?: string | null
@@ -291,6 +329,47 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reported_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          message_id: string
+          reason: string
+          reported_by: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message_id: string
+          reason: string
+          reported_by: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message_id?: string
+          reason?: string
+          reported_by?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reported_messages_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
         ]
@@ -381,6 +460,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -394,6 +494,13 @@ export type Database = {
         Args: { user1: string; user2: string }
         Returns: string
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_room_role: {
         Args: {
           _role: Database["public"]["Enums"]["room_role"]
@@ -402,12 +509,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_user_online: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       regenerate_invite_code: {
         Args: { _room_id: string }
         Returns: string
       }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       room_role: "owner" | "admin" | "moderator" | "member"
     }
     CompositeTypes: {
@@ -536,6 +648,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       room_role: ["owner", "admin", "moderator", "member"],
     },
   },
