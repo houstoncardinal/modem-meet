@@ -224,34 +224,73 @@ const DirectMessages = () => {
     );
   }
 
+  const selectedConv = conversations.find((c) => c.id === selectedConversation);
+
   return (
-    <div className="h-screen flex flex-col scanline">
-      {/* Header */}
-      <div className="border-b-2 border-primary bg-card p-4">
+    <div className="h-screen flex flex-col pb-16 lg:pb-0">
+      {/* Header - only show on desktop or when viewing conversation list on mobile */}
+      <div className={`border-b-2 border-primary bg-card/95 backdrop-blur p-4 ${selectedConversation ? 'hidden lg:block' : ''}`}>
         <div className="max-w-7xl mx-auto flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => navigate("/rooms")}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate("/rooms")}
+            className="hidden lg:flex"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-primary text-glow-cyan" />
+            <MessageSquare className="h-5 w-5 text-primary" />
             <h1 className="text-xl font-bold text-foreground">Direct Messages</h1>
           </div>
         </div>
       </div>
 
+      {/* Chat Header - only show on mobile when in chat view */}
+      {selectedConversation && selectedConv && (
+        <div className="lg:hidden border-b-2 border-primary bg-card/95 backdrop-blur p-4">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedConversation(null)}
+              className="p-2"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <UserAvatar
+              username={selectedConv.other_user.username}
+              avatarUrl={selectedConv.other_user.avatar_url}
+              size="sm"
+            />
+            <div className="flex-1">
+              <p className="font-bold text-sm text-foreground">
+                {selectedConv.other_user.username}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {selectedConv.other_user.status === "online" ? "Active now" : "Offline"}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 flex overflow-hidden max-w-7xl mx-auto w-full">
-        {/* Conversations List */}
-        <div className="w-80 border-r-2 border-primary bg-card overflow-y-auto">
-          <div className="p-4 border-b-2 border-border">
+        {/* Conversations List - hidden on mobile when chat is open */}
+        <div className={`w-full lg:w-80 lg:border-r-2 border-primary bg-card overflow-y-auto ${
+          selectedConversation ? 'hidden lg:block' : 'block'
+        }`}>
+          <div className="p-4 border-b-2 border-border lg:block hidden">
             <h2 className="font-bold text-foreground">Conversations</h2>
           </div>
           {conversations.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              <p>No conversations yet</p>
-              <p className="text-xs mt-2">Click on a user's profile to start chatting</p>
+            <div className="p-6 text-center text-muted-foreground">
+              <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="font-medium mb-1">No conversations yet</p>
+              <p className="text-xs">Click on a user's profile to start chatting</p>
             </div>
           ) : (
-            <div>
+            <div className="divide-y-2 divide-border">
               {conversations.map((conv) => (
                 <button
                   key={conv.id}
@@ -267,15 +306,13 @@ const DirectMessages = () => {
                     avatarUrl={conv.other_user.avatar_url}
                     size="md"
                   />
-                  <div className="flex-1 text-left">
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-sm text-foreground">
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-bold text-sm text-foreground truncate">
                         {conv.other_user.username}
                       </p>
                       {conv.other_user.status === "online" && (
-                        <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                          Online
-                        </Badge>
+                        <div className="flex-shrink-0 w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -288,57 +325,83 @@ const DirectMessages = () => {
           )}
         </div>
 
-        {/* Messages Area */}
+        {/* Messages Area - full width on mobile when open */}
         {selectedConversation ? (
-          <div className="flex-1 flex flex-col">
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex gap-3 ${
-                    msg.sender_id === user?.id ? "flex-row-reverse" : ""
-                  }`}
-                >
-                  <UserAvatar
-                    username={msg.profiles.username}
-                    avatarUrl={msg.profiles.avatar_url}
-                    size="sm"
-                  />
-                  <div
-                    className={`max-w-md p-3 border-2 ${
-                      msg.sender_id === user?.id
-                        ? "border-secondary bg-secondary/10"
-                        : "border-primary bg-primary/10"
-                    }`}
-                  >
-                    <p className="text-sm text-foreground">{msg.content}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatTime(msg.created_at)}
-                    </p>
+          <div className={`flex-1 flex flex-col ${selectedConversation ? 'flex' : 'hidden lg:flex'}`}>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.length === 0 ? (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center text-muted-foreground">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">No messages yet</p>
+                    <p className="text-xs mt-1">Start the conversation!</p>
                   </div>
                 </div>
-              ))}
+              ) : (
+                messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex gap-2 ${
+                      msg.sender_id === user?.id ? "flex-row-reverse" : ""
+                    }`}
+                  >
+                    <div className="flex-shrink-0">
+                      <UserAvatar
+                        username={msg.profiles.username}
+                        avatarUrl={msg.profiles.avatar_url}
+                        size="sm"
+                      />
+                    </div>
+                    <div className="flex flex-col max-w-[75%] sm:max-w-md">
+                      <div
+                        className={`p-3 border-2 rounded-lg ${
+                          msg.sender_id === user?.id
+                            ? "border-primary bg-primary/10"
+                            : "border-muted bg-muted/30"
+                        }`}
+                      >
+                        <p className="text-sm text-foreground break-words">{msg.content}</p>
+                      </div>
+                      <p className={`text-xs text-muted-foreground mt-1 px-1 ${
+                        msg.sender_id === user?.id ? "text-right" : ""
+                      }`}>
+                        {formatTime(msg.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Input */}
-            <div className="border-t-2 border-primary bg-card p-4">
+            <div className="border-t-2 border-primary bg-card/95 backdrop-blur p-4">
               <div className="flex gap-2">
                 <Input
-                  placeholder="type_message..."
+                  placeholder="Type a message..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                  className="border-2 border-primary bg-background rounded-none"
+                  className="border-2 border-primary/20 bg-background focus:border-primary transition-colors"
                 />
-                <Button onClick={handleSendMessage} size="icon">
+                <Button 
+                  onClick={handleSendMessage} 
+                  size="icon"
+                  disabled={!newMessage.trim()}
+                  className="flex-shrink-0"
+                >
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-muted-foreground">Select a conversation to start messaging</p>
+          <div className="hidden lg:flex flex-1 items-center justify-center bg-muted/10">
+            <div className="text-center text-muted-foreground">
+              <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-30" />
+              <p className="font-medium">Select a conversation</p>
+              <p className="text-sm mt-1">Choose a chat to start messaging</p>
+            </div>
           </div>
         )}
       </div>
