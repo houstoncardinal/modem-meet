@@ -78,9 +78,14 @@ const Explore = () => {
 
       if (postsError) throw postsError;
 
+      // Filter out posts without valid profiles
+      const validPosts = (postsData || []).filter(
+        (post: any) => post.profiles && typeof post.profiles === 'object' && post.profiles.username
+      );
+
       // Fetch likes count and user's like status for each post
       const postsWithCounts = await Promise.all(
-        (postsData || []).map(async (post) => {
+        validPosts.map(async (post: any) => {
           const [likesResult, userLikeResult, commentsResult] = await Promise.all([
             supabase
               .from("post_likes")
@@ -107,7 +112,7 @@ const Explore = () => {
         })
       );
 
-      setPosts(postsWithCounts);
+      setPosts(postsWithCounts as Post[]);
     } catch (error: any) {
       toast({
         title: "Error loading posts",
