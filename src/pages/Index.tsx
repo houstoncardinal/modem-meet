@@ -17,7 +17,7 @@ const Index = () => {
       <div className="w-full max-w-2xl space-y-8 animate-slide-up relative z-10">
         {/* ASCII Art Logo */}
         <div className="text-center">
-          <pre className="text-primary text-glow-cyan text-xs sm:text-sm md:text-base inline-block animate-flicker">
+          <pre className="text-primary text-glow-cyan text-[7px] xs:text-[8px] sm:text-xs md:text-sm inline-block animate-flicker">
 {`
  ██████╗██╗  ██╗ █████╗ ████████╗██╗     ██╗███╗   ██╗██╗  ██╗
 ██╔════╝██║  ██║██╔══██╗╚══██╔══╝██║     ██║████╗  ██║██║ ██╔╝
