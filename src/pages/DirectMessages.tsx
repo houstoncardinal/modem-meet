@@ -6,8 +6,10 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Send, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "@/components/UserAvatar";
+import { Badge } from "@/components/ui/badge";
 
 interface Conversation {
   id: string;
@@ -19,6 +21,7 @@ interface Conversation {
     username: string;
     avatar_url: string | null;
     status: string;
+    last_seen: string | null;
   };
   unread_count: number;
 }
@@ -38,6 +41,7 @@ const DirectMessages = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  useOnlineStatus(); // Track online status
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
@@ -82,13 +86,21 @@ const DirectMessages = () => {
           const otherUserId = conv.user1_id === user?.id ? conv.user2_id : conv.user1_id;
           const { data: userData } = await supabase
             .from("profiles")
-            .select("id, username, avatar_url, status")
+            .select("id, username, avatar_url, status, last_seen")
             .eq("id", otherUserId)
             .single();
 
+          // Check if user is online (last seen within 5 minutes)
+          const isOnline = userData?.last_seen 
+            ? new Date().getTime() - new Date(userData.last_seen).getTime() < 300000
+            : false;
+
           return {
             ...conv,
-            other_user: userData,
+            other_user: {
+              ...userData,
+              status: isOnline ? "online" : "offline",
+            },
             unread_count: 0, // TODO: Implement unread count
           };
         })
@@ -256,11 +268,18 @@ const DirectMessages = () => {
                     size="md"
                   />
                   <div className="flex-1 text-left">
-                    <p className="font-bold text-sm text-foreground">
-                      {conv.other_user.username}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-sm text-foreground">
+                        {conv.other_user.username}
+                      </p>
+                      {conv.other_user.status === "online" && (
+                        <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                          Online
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      {conv.other_user.status}
+                      {conv.other_user.status === "online" ? "Active now" : "Offline"}
                     </p>
                   </div>
                 </button>

@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Hash, Users, TrendingUp, MessageCircle, Search, LogOut, User, Mail } from "lucide-react";
+import { Hash, Users, TrendingUp, MessageCircle, Search, LogOut, User, Mail, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { CreateRoomDialog } from "@/components/CreateRoomDialog";
 import { useToast } from "@/hooks/use-toast";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
@@ -29,7 +31,9 @@ interface Profile {
 const Rooms = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
+  const { isModerator } = useUserRole();
   const { toast } = useToast();
+  useOnlineStatus(); // Track online status
   const [rooms, setRooms] = useState<Room[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -217,6 +221,16 @@ const Rooms = () => {
               </p>
             </div>
             <div className="flex gap-2 flex-wrap">
+              {isModerator && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/admin")}
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  Admin
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="sm"

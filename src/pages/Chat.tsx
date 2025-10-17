@@ -6,6 +6,7 @@ import { ArrowLeft, Send, Users, Hash, Paperclip } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { UserAvatar } from "@/components/UserAvatar";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { RoomSettingsDialog } from "@/components/RoomSettingsDialog";
@@ -53,6 +54,7 @@ const Chat = () => {
   const { roomId } = useParams();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  useOnlineStatus(); // Track online status
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<RoomMember[]>([]);
@@ -279,6 +281,43 @@ const Chat = () => {
     if ((!message.trim() && !attachmentData) || !user) return;
 
     try {
+      // Check rate limit (10 messages per minute)
+      const { data: rateLimit } = await supabase
+        .from("message_rate_limit")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("room_id", roomId)
+        .maybeSingle();
+
+      const now = new Date();
+      const windowStart = rateLimit?.window_start
+        ? new Date(rateLimit.window_start)
+        : null;
+      const messageCount = rateLimit?.message_count || 0;
+
+      // Reset window if more than 1 minute has passed
+      if (!windowStart || now.getTime() - windowStart.getTime() > 60000) {
+        await supabase.from("message_rate_limit").upsert({
+          user_id: user.id,
+          room_id: roomId,
+          message_count: 1,
+          window_start: now.toISOString(),
+        });
+      } else if (messageCount >= 10) {
+        toast({
+          title: "Slow down!",
+          description: "You're sending messages too quickly. Please wait a moment.",
+          variant: "destructive",
+        });
+        return;
+      } else {
+        await supabase
+          .from("message_rate_limit")
+          .update({ message_count: messageCount + 1 })
+          .eq("user_id", user.id)
+          .eq("room_id", roomId);
+      }
+
       const { error } = await supabase.from("messages").insert({
         room_id: roomId,
         user_id: user.id,

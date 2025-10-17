@@ -60,15 +60,15 @@ const Index = () => {
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
               <div className="text-xs">
-                <div className="text-accent font-bold">12,847</div>
-                <div className="text-muted-foreground">Online Now</div>
+                <div className="text-accent font-bold animate-flicker">ONLINE</div>
+                <div className="text-muted-foreground">Live Users</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-secondary" />
               <div className="text-xs">
-                <div className="text-accent font-bold">256</div>
-                <div className="text-muted-foreground">Active Rooms</div>
+                <div className="text-accent font-bold animate-flicker">ACTIVE</div>
+                <div className="text-muted-foreground">Chat Rooms</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -83,8 +83,8 @@ const Index = () => {
 
         {/* Info Footer */}
         <div className="text-center text-xs text-muted-foreground space-y-1">
-          <p className="font-mono">[ NO REGISTRATION REQUIRED ]</p>
-          <p className="font-mono">[ ANONYMOUS & FREE FOREVER ]</p>
+          <p className="font-mono">[ REAL-TIME MESSAGING ]</p>
+          <p className="font-mono">[ SECURE & PRIVATE ]</p>
           <p className="text-primary animate-flicker">█</p>
         </div>
       </div>

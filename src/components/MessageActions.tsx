@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Edit2, Trash2, MoreVertical } from "lucide-react";
+import { Flag, Edit2, Trash2, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ReportMessageDialog } from "./ReportMessageDialog";
 
 interface MessageActionsProps {
   messageId: string;
@@ -40,9 +41,8 @@ export const MessageActions = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  if (!isOwnMessage) return null;
 
   const handleEdit = async () => {
     if (!editedContent.trim() || editedContent === content) {
@@ -155,17 +155,26 @@ export const MessageActions = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setIsEditing(true)}>
-            <Edit2 className="h-4 w-4 mr-2" />
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => setShowDeleteDialog(true)}
-            className="text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </DropdownMenuItem>
+          {isOwnMessage ? (
+            <>
+              <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                <Edit2 className="h-4 w-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setShowDeleteDialog(true)}
+                className="text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </>
+          ) : (
+            <DropdownMenuItem onClick={() => setShowReportDialog(true)}>
+              <Flag className="h-4 w-4 mr-2" />
+              Report
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -189,6 +198,12 @@ export const MessageActions = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ReportMessageDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        messageId={messageId}
+      />
     </>
   );
 };
