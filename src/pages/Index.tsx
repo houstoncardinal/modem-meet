@@ -16,31 +16,56 @@ const Index = () => {
       <AnimatedBackground />
       <div className="w-full max-w-2xl space-y-8 animate-slide-up relative z-10">
         {/* ASCII Art Logo */}
-        <div className="text-center">
-          <pre className="text-primary text-glow-cyan text-xs sm:text-sm md:text-base inline-block animate-flicker">
+        <div className="text-center overflow-hidden">
+          <div className="relative inline-block w-full">
+            {/* Glow background effect */}
+            <div className="absolute inset-0 blur-2xl opacity-30 bg-gradient-to-r from-primary via-secondary to-primary animate-pulse" />
+            
+            <pre className="text-primary text-glow-cyan text-[8px] xs:text-[10px] sm:text-sm md:text-base lg:text-lg inline-block animate-flicker font-bold relative z-10 overflow-x-auto max-w-full leading-tight tracking-tighter">
 {`
- ██████╗██╗  ██╗ █████╗ ████████╗██╗     ██╗███╗   ██╗██╗  ██╗
-██╔════╝██║  ██║██╔══██╗╚══██╔══╝██║     ██║████╗  ██║██║ ██╔╝
-██║     ███████║███████║   ██║   ██║     ██║██╔██╗ ██║█████╔╝ 
-██║     ██╔══██║██╔══██║   ██║   ██║     ██║██║╚██╗██║██╔═██╗ 
-╚██████╗██║  ██║██║  ██║   ██║   ███████╗██║██║ ╚████║██║  ██╗
- ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
+ ██████╗██╗  ██╗ █████╗ ████████╗
+██╔════╝██║  ██║██╔══██╗╚══██╔══╝
+██║     ███████║███████║   ██║   
+██║     ██╔══██║██╔══██║   ██║   
+╚██████╗██║  ██║██║  ██║   ██║   
+ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   
+██╗     ██╗███╗   ██╗██╗  ██╗
+██║     ██║████╗  ██║██║ ██╔╝
+██║     ██║██╔██╗ ██║█████╔╝ 
+██║     ██║██║╚██╗██║██╔═██╗ 
+███████╗██║██║ ╚████║██║  ██╗
+╚══════╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
 `}
-          </pre>
-          <p className="text-secondary text-glow-magenta text-sm sm:text-base mt-4 font-sans">
-            {'>>> RETRO CHAT NETWORK v2.0 <<<'}
-          </p>
+            </pre>
+          </div>
+          
+          {/* Subtitle with animated typing effect */}
+          <div className="mt-6 space-y-2">
+            <p className="text-secondary text-glow-magenta text-xs sm:text-sm md:text-base font-sans font-bold">
+              {'>>> RETRO CHAT NETWORK v2.0 <<<'}
+            </p>
+            <div className="flex items-center justify-center gap-2 text-accent text-xs animate-pulse">
+              <span className="inline-block w-2 h-2 bg-accent rounded-full animate-ping" />
+              <span>SYSTEM ONLINE</span>
+              <span className="inline-block w-2 h-2 bg-accent rounded-full animate-ping" />
+            </div>
+          </div>
         </div>
 
         {/* Welcome Card */}
-        <div className="border-2 border-primary bg-card p-8 space-y-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-secondary to-accent"></div>
+        <div className="border-2 border-primary bg-card/80 backdrop-blur p-6 sm:p-8 space-y-6 relative overflow-hidden shadow-[0_0_30px_rgba(0,255,255,0.2)]">
+          {/* Animated top border */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-secondary to-accent animate-pulse"></div>
+          
+          {/* Side glows */}
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-32 bg-gradient-to-b from-transparent via-primary to-transparent opacity-50 animate-pulse" />
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-32 bg-gradient-to-b from-transparent via-secondary to-transparent opacity-50 animate-pulse" />
           
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-primary text-glow-cyan font-sans">
+            <h1 className="text-xl sm:text-2xl font-bold text-primary text-glow-cyan font-sans animate-fade-in">
               CONNECT TO THE GRID
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm sm:text-base">
               Enter your handle to join thousands of users in real-time chat rooms
             </p>
           </div>
@@ -49,10 +74,11 @@ const Index = () => {
             <Button
               onClick={handleJoin}
               size="lg"
-              className="w-full"
+              className="w-full group relative overflow-hidden"
             >
-              <Zap className="mr-2 h-5 w-5" />
-              Get Started
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+              <Zap className="mr-2 h-5 w-5 group-hover:animate-pulse relative z-10" />
+              <span className="relative z-10">Get Started</span>
             </Button>
           </div>
 
