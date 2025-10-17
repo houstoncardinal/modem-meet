@@ -235,9 +235,9 @@ const DirectMessages = () => {
             variant="outline" 
             size="sm" 
             onClick={() => navigate("/rooms")}
-            className="hidden lg:flex"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Back</span>
           </Button>
           <div className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-primary" />
